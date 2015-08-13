@@ -25,6 +25,9 @@ endif()
 if(NOT CAF_NO_OPENCL)
   set(CAF_NO_OPENCL no)
 endif()
+if(NOT CAF_NO_REPLICATION)
+  set(CAF_NO_REPLICATION no)
+endif()
 if(NOT CAF_NO_SUMMARY)
   set(CAF_NO_SUMMARY no)
 endif()
@@ -309,7 +312,13 @@ install(DIRECTORY libcaf_test/caf/ DESTINATION include/caf
 # install includes from opencl
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   install(DIRECTORY libcaf_opencl/caf/ DESTINATION include/caf
-        FILES_MATCHING PATTERN "*.hpp")
+          FILES_MATCHING PATTERN "*.hpp")
+endif()
+
+# install includes from replication
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_replication/CMakeLists.txt")
+  install(DIRECTORY libcaf_replication/caf/ DESTINATION include/caf
+          FILES_MATCHING PATTERN "*.hpp")
 endif()
 
 # process cmake_uninstall.cmake.in
@@ -335,6 +344,11 @@ set(LIBCAF_INCLUDE_DIRS
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
   set(LIBCAF_INCLUDE_DIRS
       "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/" "${LIBCAF_INCLUDE_DIRS}")
+endif()
+# path to caf replication headers
+if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_replication/CMakeLists.txt")
+  set(LIBCAF_INCLUDE_DIRS
+      "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_replication/" "${LIBCAF_INCLUDE_DIRS}")
 endif()
 # enable tests if not disabled
 if(NOT CAF_NO_UNIT_TESTS)
@@ -391,12 +405,24 @@ if(NOT CAF_NO_OPENCL
   endif()
   add_unit_tests("libcaf_opencl/test/*.cpp")
 endif()
+# set replication lib for sub directories if not told otherwise
+if(NOT CAF_NO_REPLICATION
+  AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_replication/CMakeLists.txt")
+  add_subdirectory(libcaf_replication)
+  if(NOT CAF_BUILD_STATIC_ONLY)
+    set(LIBCAF_REPLICATION_LIBARAY libcaf_replication_shared)
+  else()
+    set(LIBCAF_REPLICATION_LIBRARY libcaf_replication_static)
+  endif()
+  add_unit_tests("libcaf_replication/test/*.cpp")
+endif()
 # tell CMake caf_io depends on caf_core
 add_dependencies(libcaf_io libcaf_core)
 # set LIBCAF_LIBRARIES for other subprojects
 set(LIBCAF_LIBRARIES "${LIBCAF_CORE_LIBRARY}"
                      "${LIBCAF_IO_LIBRARY}"
-                     "${LIBCAF_OPENCL_LIBRARY}")
+                     "${LIBCAF_OPENCL_LIBRARY}"
+                     "${LIBCAF_REPLICATION_LIBRARY}")
 # build examples if not being told otherwise
 if(NOT CAF_NO_EXAMPLES)
   add_subdirectory(examples)
@@ -404,6 +430,10 @@ if(NOT CAF_NO_EXAMPLES)
   if(NOT CAF_NO_OPENCL
      AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_opencl/CMakeLists.txt")
     add_subdirectory(libcaf_opencl/examples)
+  endif()
+  if(NOT CAF_NO_REPLICATION
+     AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/libcaf_replication/CMakeLists.txt")
+    add_subdirectory(libcaf_replication/examples)
   endif()
 endif()
 # build RIAC if not being told otherwise
@@ -585,6 +615,7 @@ invertYesNo(CAF_NO_CASH CAF_BUILD_CASH)
 invertYesNo(CAF_NO_MEM_MANAGEMENT CAF_BUILD_MEM_MANAGEMENT)
 invertYesNo(CAF_NO_BENCHMARKS CAF_BUILD_BENCHMARKS)
 invertYesNo(CAF_NO_OPENCL CAF_BUILD_OPENCL)
+invertYesNo(CAF_NO_REPLICATION CAF_BUILD_REPLICATION)
 # collect all compiler flags
 string(TOUPPER "${CMAKE_BUILD_TYPE}" UPPER_BUILD_TYPE)
 set(ALL_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${UPPER_BUILD_TYPE}}")
@@ -609,6 +640,7 @@ if(NOT CAF_NO_SUMMARY)
         "\nBuild cash:        ${CAF_BUILD_CASH}"
         "\nBuild benchmarks:  ${CAF_BUILD_BENCHMARKS}"
         "\nBuild opencl:      ${CAF_BUILD_OPENCL}"
+        "\nBuild replication: ${CAF_BUILD_REPLICATION}"
         "\n"
         "\nCXX:               ${CMAKE_CXX_COMPILER}"
         "\nCXXFLAGS:          ${ALL_CXX_FLAGS}"
